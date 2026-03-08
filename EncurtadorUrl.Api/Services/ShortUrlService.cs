@@ -21,6 +21,8 @@ public sealed class ShortUrlService(
         if (request.ExpirationDate is not null && request.ExpirationDate <= DateTimeOffset.UtcNow)
             throw new ValidationException("expirationDate deve estar no futuro.");
 
+        var defaultExpiration = request.ExpirationDate ?? DateTimeOffset.UtcNow.AddMinutes(5);
+
         var originalUrl = request.OriginalUrl!.Trim();
 
         if (!string.IsNullOrWhiteSpace(request.CustomAlias))
@@ -31,7 +33,7 @@ public sealed class ShortUrlService(
             if (await repo.IdExistsAsync(alias, ct))
                 throw new ConflictException("customAlias já está em uso.");
 
-            var entityWithAlias = new ShortUrl(id: alias, code: alias, originalUrl: originalUrl, expirationDate: request.ExpirationDate);
+            var entityWithAlias = new ShortUrl(id: alias, code: alias, originalUrl: originalUrl, expirationDate: defaultExpiration);
 
             await repo.AddAsync(entityWithAlias, ct);
 
@@ -58,7 +60,7 @@ public sealed class ShortUrlService(
                 continue;
             }
 
-            var entity = new ShortUrl(id: id, code: id, originalUrl: originalUrl, expirationDate: request.ExpirationDate);
+            var entity = new ShortUrl(id: id, code: id, originalUrl: originalUrl, expirationDate:defaultExpiration);
             await repo.AddAsync(entity, ct);
 
             try
