@@ -10,6 +10,6 @@ public sealed class RedirectController(ShortUrlService service) : ControllerBase
     public async Task<IActionResult> RedirectToOriginal([FromRoute] string id, CancellationToken ct)
     {
         var originalUrl = await service.ResolveAndCountClickAsync(id, ct);
-        return Redirect(originalUrl);
+        return Ok(originalUrl);
     }
 }
