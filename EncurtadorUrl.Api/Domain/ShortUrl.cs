@@ -4,8 +4,9 @@ public sealed class ShortUrl
 {
     private ShortUrl() { }
 
-    public ShortUrl(string code, string originalUrl, DateTimeOffset? expirationDate)
+    public ShortUrl(string id, string code, string originalUrl, DateTimeOffset? expirationDate)
     {
+        Id = id ?? throw new ArgumentNullException(nameof(id));
         Code = code ?? throw new ArgumentNullException(nameof(code));
         OriginalUrl = originalUrl ?? throw new ArgumentNullException(nameof(originalUrl));
         ExpirationDate = expirationDate;
@@ -13,7 +14,7 @@ public sealed class ShortUrl
         ClickCount = 0;
     }
 
-    public long Id { get; private set; }
+    public string Id { get; private set; }
 
     public string Code { get; private set; } = default!;
 
@@ -30,11 +31,11 @@ public sealed class ShortUrl
 
     public void RegisterClick() => ClickCount++;
 
-    public void SetCode(string code)
+    public void SetCode(string id)
     {
-        if (string.IsNullOrWhiteSpace(code))
-            throw new ArgumentException("Code não pode ser vazio.", nameof(code));
+        if (string.IsNullOrWhiteSpace(id))
+            throw new ArgumentException("id não pode ser vazio.", nameof(id));
 
-        Code = code;
+        Id = id;
     }
 }

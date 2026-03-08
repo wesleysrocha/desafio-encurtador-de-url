@@ -17,12 +17,18 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
 
             entity.HasKey(x => x.Id);
 
+            entity.Property(x => x.Id)
+                .HasColumnName("id")
+                .HasMaxLength(64)
+                .IsRequired()
+                .HasColumnType("string");
+
             entity.Property(x => x.Code)
                 .HasColumnName("code")
                 .HasMaxLength(64)
                 .IsRequired();
 
-            entity.HasIndex(x => x.Code)
+            entity.HasIndex(x => x.Id)
                 .IsUnique();
 
             entity.Property(x => x.OriginalUrl)
