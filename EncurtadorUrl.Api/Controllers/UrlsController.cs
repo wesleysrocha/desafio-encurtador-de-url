@@ -27,7 +27,7 @@ public sealed class UrlsController(ShortUrlService service) : ControllerBase
             value: created);
     }
 
-    [HttpGet("{id:regex(^[[0-9A-Za-z_-]]{{3,64}}$)}")]
+    [HttpGet("{id}")]
     [ProducesResponseType(typeof(ShortUrlResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status410Gone)]
@@ -35,8 +35,8 @@ public sealed class UrlsController(ShortUrlService service) : ControllerBase
         [FromRoute] string id,
         CancellationToken ct)
     {
-        var originalUrl = await service.ResolveAndCountClickAsync(id, ct);
-        return Ok(originalUrl);
+        var result = await service.GetDetailsAsync(id, ct);
+        return Ok(result);
     }
 
     //url de paginacao
