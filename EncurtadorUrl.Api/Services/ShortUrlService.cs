@@ -11,8 +11,6 @@ public sealed class ShortUrlService(
     ILogger<ShortUrlService> logger)
 {
     private readonly string _baseUrl = config["Shortener:BaseUrl"] ?? "http://localhost:8080";
-    private readonly int _generatedCodeLength =
-        int.TryParse(config["Shortener:GeneratedCodeLength"], out var v) ? Math.Clamp(v, 4, 12) : 5;
 
     private const int MaxGenerateAttempts = 6;
 
@@ -29,7 +27,7 @@ public sealed class ShortUrlService(
 
         if (!string.IsNullOrWhiteSpace(request.CustomAlias))
         {
-            var novoId = Base62.GenerateRandom(_generatedCodeLength);
+            var novoId = Base62Service.GenerateRandom(5);
 
             var alias = request.CustomAlias.Trim();
             UrlValidator.EnsureValidAlias(alias);
@@ -59,7 +57,7 @@ public sealed class ShortUrlService(
 
         for (int attempt = 0; attempt < MaxGenerateAttempts; attempt++)
         {
-            var id = Base62.GenerateRandom(_generatedCodeLength);
+            var id = Base62Service.GenerateRandom(5);
             if (await repo.IdExistsAsync(id, ct))
             {
                 logger.LogDebug("ID gerado já existe, tentar novamente: {Id}", id);
@@ -67,7 +65,7 @@ public sealed class ShortUrlService(
             }
 
 
-            var alias = Base62.GenerateRandomLettersWithDash();
+            var alias = Base62Service.GerarAleatoriamenteCustomAlias();
             if (alias is null)
             {
                 logger.LogDebug("Não foi possível gerar alias para o id={Id}, tentar novamente...", id);
@@ -178,19 +176,5 @@ public sealed class ShortUrlService(
 
         await repo.DeleteAsync(entity, ct);
         await repo.SaveChangesAsync(ct);
-    }
-
-    private async Task<string?> GerarAliasAsync(string id, CancellationToken ct)
-    {
-        for (int i = 0; i < MaxGenerateAttempts; i++)
-        {
-            var novoAlias = Base62.GenerateRandomLettersWithDash(_generatedCodeLength);
-
-            if (await repo.CodeExistsAsync(novoAlias, ct)) continue;
-
-            return novoAlias;
-        }
-
-        return null;
     }
 }

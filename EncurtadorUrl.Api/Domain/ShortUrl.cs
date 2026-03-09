@@ -1,5 +1,8 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace UrlShortener.Api.Domain;
 
+[ExcludeFromCodeCoverage]
 public sealed class ShortUrl
 {
     private ShortUrl() { }
