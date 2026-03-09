@@ -67,7 +67,7 @@ public sealed class ShortUrlService(
             }
 
 
-            var alias = await GerarAliasAsync(id: id, ct: ct);
+            var alias = Base62.GenerateRandomLettersWithDash();
             if (alias is null)
             {
                 logger.LogDebug("Não foi possível gerar alias para o id={Id}, tentar novamente...", id);
@@ -186,9 +186,7 @@ public sealed class ShortUrlService(
         {
             var novoAlias = Base62.GenerateRandomLettersWithDash(_generatedCodeLength);
 
-            if (novoAlias == id) continue;
             if (await repo.CodeExistsAsync(novoAlias, ct)) continue;
-            if (await repo.IdExistsAsync(novoAlias, ct)) continue;
 
             return novoAlias;
         }
