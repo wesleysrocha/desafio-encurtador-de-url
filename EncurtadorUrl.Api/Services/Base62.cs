@@ -35,4 +35,21 @@ public static class Base62
         }
         return new string(chars);
     }
+    public static string GenerateRandomLettersWithDash(int partLength = 4)
+    {
+        if (partLength < 1) throw new ArgumentOutOfRangeException(nameof(partLength));
+      
+        var total = partLength * 2 + 1; 
+        var chars = new char[total];
+
+        for (int i = 0; i < partLength; i++)
+            chars[i] = Alphabet[RandomNumberGenerator.GetInt32(Alphabet.Length)];
+
+        chars[partLength] = '-';
+
+        for (int i = 0; i < partLength; i++)
+            chars[partLength + 1 + i] = Alphabet[RandomNumberGenerator.GetInt32(Alphabet.Length)];
+
+        return new string(chars);
+    }
 }

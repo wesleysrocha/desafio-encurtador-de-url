@@ -5,7 +5,7 @@ namespace UrlShortener.Api.Repositories;
 public interface IShortUrlRepository
 {
     Task<bool> IdExistsAsync(string id, CancellationToken ct);
-
+    Task<bool> CodeExistsAsync(string code, CancellationToken ct);
     Task<ShortUrl?> GetByIdAsync(string id, CancellationToken ct);
     Task<ShortUrl?> GetByIdAsNoTrackingAsync(string id, CancellationToken ct);
 

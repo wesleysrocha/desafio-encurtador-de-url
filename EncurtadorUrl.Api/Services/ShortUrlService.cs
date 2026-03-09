@@ -11,7 +11,9 @@ public sealed class ShortUrlService(
     ILogger<ShortUrlService> logger)
 {
     private readonly string _baseUrl = config["Shortener:BaseUrl"] ?? "http://localhost:8080";
-    private readonly int _generatedCodeLength = int.TryParse(config["Shortener:GeneratedCodeLength"], out var v) ? Math.Clamp(v, 4, 12) : 5;
+    private readonly int _generatedCodeLength =
+        int.TryParse(config["Shortener:GeneratedCodeLength"], out var v) ? Math.Clamp(v, 4, 12) : 5;
+
     private const int MaxGenerateAttempts = 6;
 
     public async Task<ShortUrlResponse> CreateAsync(CreateShortUrlRequest request, CancellationToken ct)
@@ -27,13 +29,15 @@ public sealed class ShortUrlService(
 
         if (!string.IsNullOrWhiteSpace(request.CustomAlias))
         {
+            var novoId = Base62.GenerateRandom(_generatedCodeLength);
+
             var alias = request.CustomAlias.Trim();
             UrlValidator.EnsureValidAlias(alias);
 
-            if (await repo.IdExistsAsync(alias, ct))
+            if (await repo.CodeExistsAsync(alias, ct))
                 throw new ConflictException("customAlias já está em uso.");
 
-            var entityWithAlias = new ShortUrl(id: alias, code: alias, originalUrl: originalUrl, expirationDate: defaultExpiration);
+            var entityWithAlias = new ShortUrl(id: novoId, code: alias, originalUrl: originalUrl, expirationDate: defaultExpiration);
 
             await repo.AddAsync(entityWithAlias, ct);
 
@@ -46,32 +50,52 @@ public sealed class ShortUrlService(
                 throw new ConflictException("customAlias já está em uso.");
             }
 
-            logger.LogInformation("Short URL criada com alias: {Code} -> {OriginalUrl}", entityWithAlias.Code, entityWithAlias.OriginalUrl);
+            logger.LogInformation(
+                "Short URL criada com alias: Id={Id} Code={Code} -> {OriginalUrl}",
+                entityWithAlias.Id, entityWithAlias.Code, entityWithAlias.OriginalUrl);
+
             return ToResponse(entityWithAlias);
         }
 
         for (int attempt = 0; attempt < MaxGenerateAttempts; attempt++)
         {
             var id = Base62.GenerateRandom(_generatedCodeLength);
-
             if (await repo.IdExistsAsync(id, ct))
             {
-                logger.LogDebug("Generated code already exists, retrying: {Id}", id);
+                logger.LogDebug("ID gerado já existe, tentar novamente: {Id}", id);
                 continue;
             }
 
-            var entity = new ShortUrl(id: id, code: id, originalUrl: originalUrl, expirationDate:defaultExpiration);
+
+            var alias = await GerarAliasAsync(id: id, ct: ct);
+            if (alias is null)
+            {
+                logger.LogDebug("Não foi possível gerar alias para o id={Id}, tentar novamente...", id);
+                continue;
+            }
+
+            var entity = new ShortUrl(
+                id: id,
+                code: alias,
+                originalUrl: originalUrl,
+                expirationDate: defaultExpiration);
+
             await repo.AddAsync(entity, ct);
 
             try
             {
                 await repo.SaveChangesAsync(ct);
-                logger.LogInformation("Short URL criada: {Code} -> {OriginalUrl}", entity.Code, entity.OriginalUrl);
+
+                logger.LogInformation(
+                    "Short URL criada: Id={Id} Code={Code} -> {OriginalUrl}",
+                    entity.Id, entity.Code, entity.OriginalUrl);
+
                 return ToResponse(entity);
             }
             catch (DbUpdateException ex)
             {
-                logger.LogWarning(ex, "DbUpdateException ao salvar código gerado. Tentativa {Attempt}", attempt + 1);
+                logger.LogWarning(ex, "DbUpdateException ao salvar ID/Code gerados. Tentativa {Attempt}", attempt + 1);
+
                 try
                 {
                     var ctx = repo as Microsoft.EntityFrameworkCore.DbContext;
@@ -86,7 +110,6 @@ public sealed class ShortUrlService(
                 }
             }
         }
-
         throw new ConflictException("Não foi possível gerar um código único para a URL após várias tentativas.");
     }
 
@@ -122,7 +145,6 @@ public sealed class ShortUrlService(
 
         return entity.OriginalUrl;
     }
-
     private ShortUrlResponse ToResponse(ShortUrl entity) => new()
     {
         Id = entity.Id.ToString(),
@@ -156,5 +178,21 @@ public sealed class ShortUrlService(
 
         await repo.DeleteAsync(entity, ct);
         await repo.SaveChangesAsync(ct);
+    }
+
+    private async Task<string?> GerarAliasAsync(string id, CancellationToken ct)
+    {
+        for (int i = 0; i < MaxGenerateAttempts; i++)
+        {
+            var novoAlias = Base62.GenerateRandomLettersWithDash(_generatedCodeLength);
+
+            if (novoAlias == id) continue;
+            if (await repo.CodeExistsAsync(novoAlias, ct)) continue;
+            if (await repo.IdExistsAsync(novoAlias, ct)) continue;
+
+            return novoAlias;
+        }
+
+        return null;
     }
 }

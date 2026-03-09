@@ -9,6 +9,8 @@ public sealed class ShortUrlRepository(AppDbContext db) : IShortUrlRepository
     public Task<bool> IdExistsAsync(string id, CancellationToken ct)
         => db.ShortUrls.AnyAsync(x => x.Id == id, ct);
 
+    public Task<bool> CodeExistsAsync(string code, CancellationToken ct)
+            => db.ShortUrls.AnyAsync(x => x.Code == code, ct);
     public Task<ShortUrl?> GetByIdAsync(string id, CancellationToken ct)
         => db.ShortUrls.FirstOrDefaultAsync(x => x.Id == id, ct);
 
