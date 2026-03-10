@@ -43,6 +43,13 @@ Construir uma API que retorne uma URL encurtada, estilo bitly. Podemos criar uma
 3. Acesse o Swagger:
    - http://localhost:8080/swagger
 
+
+
+### Executar com Docker Compose
+```bash
+docker compose up --build
+```
+
 ### Executar com Docker
 1. Construa a imagem:
    ```bash
@@ -61,11 +68,6 @@ Construir uma API que retorne uma URL encurtada, estilo bitly. Podemos criar uma
 
 4. Acesse o Swagger:
    - http://localhost:8080/swagger
-
-### Executar com Docker Compose
-```bash
-docker-compose up --build
-```
 
 ### Observações
 - O banco SQLite é um arquivo chamado **`app.db`** e é criado automaticamente na primeira execução.
