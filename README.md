@@ -1,8 +1,34 @@
 # URL Shortener API (.NET 8 + SQLite)
 
-API de encurtamento de URLs com redirecionamento 
+API de encurtamento de URLs, com redirecionamento para uma URL específica e busca de URLs.
 
 ---
+## 📌 Sumário
+
+1. [Objetivo](#objetivo)
+2. [Diagramas de Arquitetura](#diagrama-de-use-case)
+    - [Casos de Uso](#diagrama-de-use-case)
+    - [Modelagem do Banco de Dados](#modelagem-do-banco)
+3. [Stack Tecnológica](#linguagem--stack-utilizada)
+4. [Como Rodar o Projeto](#como-rodar-o-projeto-passo-a-passo)
+    - [Pré-requisitos](#pré-requisitos)
+    - [Execução Local (.NET)](#executar-a-api-porta-8080)
+    - [Execução via Docker Compose](#executar-com-docker-compose)
+    - [Execução via Docker (Manual)](#executar-com-docker)
+5. [Testes Unitários e Integrados](#como-rodar-os-testes)
+6. [Decisões de Arquitetura](#decisões-de-arquitetura-breve)
+    - [Estrutura do Projeto](#estrutura-simples-e-direta)
+    - [Regras de Geração (ID, Alias e Expiração)](#como-o-id-é-gerado)
+    - [Persistência e Segurança](#persistência-de-dados)
+7. [Documentação da API (Endpoints)](#endpoints)
+    - [POST - Criar URL](#criar-short-url)
+    - [GET - Redirecionar](#redirecionar-url-específica)
+    - [GET - Detalhes](#consultar-detalhes-de-um-id-específico)
+    - [GET - Listagem Paginada](#listar-todas-urls-paginádas)
+    - [DELETE - Remover URL](#delete-de-uma-url-específica)
+8. [Configurações de Ambiente](#configuração)
+9. [Checklist de Requisitos e Diferenciais](#regras-propostas-e-atingidas) 
+
 # Objetivo
 Construir uma API que retorne uma URL encurtada, estilo bitly. Podemos criar uma URL através do método POST, redirecionar URL através da GET /{id}, consultar uma URL específica pela rota GET /v1/urls/{id}, consultar todas as URLs cadastradas na /v1/urls e deletar uma URL com o DELETE /v1/urls/{id}.
 
