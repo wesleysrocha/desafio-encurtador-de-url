@@ -25,7 +25,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
 
             entity.Property(x => x.Code)
                 .HasColumnName("code")
-                .HasMaxLength(64)
+                .HasMaxLength(12)
                 .IsRequired();
 
             entity.HasIndex(x => x.Id)

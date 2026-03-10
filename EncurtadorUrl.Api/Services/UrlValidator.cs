@@ -21,8 +21,8 @@ public static class UrlValidator
         if (string.IsNullOrWhiteSpace(alias))
             throw new ValidationException("customAlias não pode ser vazio.");
 
-        if (alias.Length < 3 || alias.Length > 64)
-            throw new ValidationException("customAlias deve ter entre 3 e 64 caracteres.");
+        if (alias.Length < 3 || alias.Length > 12)
+            throw new ValidationException("customAlias deve ter entre 3 e 12 caracteres.");
 
         // Permitimos apenas: A-Z a-z 0-9 - _
         foreach (var ch in alias)
