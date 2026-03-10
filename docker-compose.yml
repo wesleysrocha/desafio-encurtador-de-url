@@ -1,0 +1,18 @@
+services:
+  urlshortener-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: urlshortener-api
+    ports:
+      - "8080:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: "Development"
+      Shortener__BaseUrl: "http://localhost:8080"
+      Shortener__ApiKey: "itau"
+      ConnectionStrings__Sqlite: "Data Source=/app/data/app.db"
+    volumes:
+      - urlshortener-data:/app/data
+
+volumes:
+  urlshortener-data:

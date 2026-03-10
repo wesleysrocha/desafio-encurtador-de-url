@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="EncurtadorUrl.Api.Tests/EncurtadorUrl.Api.Tests.csproj" Id="ea0171fa-0e4a-48f7-aec4-83f3dfb035f6" />
+  <Project Path="EncurtadorUrl.Api/EncurtadorUrl.Api.csproj" />
+</Solution>
