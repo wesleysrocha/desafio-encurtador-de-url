@@ -1,6 +1,3 @@
-# desafio-encurtador-de-url
-
-
 # URL Shortener API (.NET 8 + SQLite)
 
 API de encurtamento de URLs com redirecionamento 
@@ -8,6 +5,11 @@ API de encurtamento de URLs com redirecionamento
 ---
 # Objetivo
 Construir uma API que retorne uma URL encurtada, estilo bitly. Podemos criar uma URL através do método POST, redirecionar URL através da GET /{id}, consultar uma URL específica pela rota GET /v1/urls/{id}, consultar todas as URLs cadastradas na /v1/urls e deletar uma URL com o DELETE /v1/urls/{id}.
+
+## Diagrama de Use Case
+![use case](images/useCase.png)
+## Modelagem do banco
+![banco](images/diagramaBanco.png)
 
 ## Linguagem / stack utilizada
 
@@ -150,6 +152,16 @@ dotnet test
   - `Content-Type: application/json`
   - `X-API-Key: itau`
 
+### Request 
+
+Por padrão o único campo obrigatório na rota POST é `originalUrl`.
+O `customAlias` se não informado é gerado na aplicação e  `expirationDate` se não informado, tem a duração por padrão de 5 minutos.
+
+```
+{
+  "originalUrl": "https://github.com"
+} 
+```
 #### Exemplo (curl)
 ```bash
 curl -i -X POST "http://localhost:8080/v1/urls" \
@@ -161,8 +173,6 @@ curl -i -X POST "http://localhost:8080/v1/urls" \
     "expirationDate": "2026-12-31T23:59:59Z"
   }'
 ```
-
-Por padrão o único campo obrigatório na rota POST é originalUrl, customAlias se não informado é gerado na aplicação e expirationDate se não informado, tem a duração por padrão de 5 minutos.
 
 #### Exemplo de resposta (201)
 ```json
@@ -179,7 +189,7 @@ Por padrão o único campo obrigatório na rota POST é originalUrl, customAlias
 
 ---
 
-### Redirecionar
+### Redirecionar URL específica
 - **GET** `/{id}`
 - Retorna **200** com response Body contendo a URL.
 
@@ -189,13 +199,13 @@ curl -i "http://localhost:8080/L7iNE"
 ```
 
 #### Exemplo de resposta (200)
-- Headers (exemplo):
-  - `HTTP/1.1 200 OK`
-  - `https://www.google.com`
+```
+https://www.google.com
+```
 
 ---
 
-### Consultar detalhes
+### Consultar detalhes de um ID específico
 - **GET** `/v1/urls/{id}`
 
 #### Exemplo (curl)
@@ -216,13 +226,56 @@ curl -i "http://localhost:8080/v1/urls/L7iNE"
 }
 ```
 
----
-### Detalhes
-```bash
-http GET :8080/v1/urls/L7iNE
-```
 
 ---
+
+### Listar todas URLs paginádas
+- **GET** `/v1/urls`
+
+Definido páginação máxima para 100 registros.
+
+#### Exemplo (curl)
+```bash
+curl -i "http://localhost:8080/v1/urls"
+```
+
+#### Exemplo de resposta (200)
+```json
+[
+  {
+    "id": "D8X1F",
+    "customAlias": "itau-home",
+    "shortUrl": "http://localhost:8080/D8X1F",
+    "originalUrl": "https://itau.com",
+    "createdAt": "2026-03-10T16:41:40.9333372+00:00",
+    "expirationDate": "2026-03-11T16:35:45.218+00:00",
+    "clickCount": 0
+  },
+  {
+    "id": "e8NT8",
+    "customAlias": "teste",
+    "shortUrl": "http://localhost:8080/e8NT8",
+    "originalUrl": "https://github.com",
+    "createdAt": "2026-03-10T16:41:01.8794511+00:00",
+    "expirationDate": "2026-03-11T16:35:45.218+00:00",
+    "clickCount": 0
+  }
+]
+```
+
+### Delete de uma URL específica
+- **DELETE** `/v1/urls/{id}`
+
+#### Exemplo (curl)
+```bash
+curl -X 'DELETE' \
+  'http://localhost:8080/v1/urls/e8NT8' \
+  -H 'accept: */*'
+```
+
+#### resposta (204) No Content
+
+
 
 ## Configuração
 
