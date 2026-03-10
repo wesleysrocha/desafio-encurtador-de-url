@@ -228,12 +228,7 @@ http GET :8080/v1/urls/L7iNE
   - `Shortener:BaseUrl` = `http://localhost:8080`
   - `Shortener:ApiKey` = `itau`
   - `ConnectionStrings:Sqlite` = `Data Source=app.db`
-```
----
- 
- 
-
-
+  
 ## Regras propostas e atingidas 
 - [x] Geração de IDs curto legível em URLs (ex.: base62, alfanumérico).
 - [x] Evitar colisões (duas URLs diferentes não podem ter o mesmo id).
@@ -252,4 +247,3 @@ http GET :8080/v1/urls/L7iNE
 - [x] Adicionado dois endpoints um para Consultar todas as URLs cadastradas na /v1/urls e outro para deletar uma URL com o DELETE /v1/urls/{id}.
 - [x] foi adicionado Dockerfile e/ou docker-compose para facilitar a execução 
 - [x] teste integrado validando end to end tanto da rota que cria URL como a que consulta.
-- [x]  
