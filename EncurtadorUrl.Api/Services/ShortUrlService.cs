@@ -147,7 +147,7 @@ public sealed class ShortUrlService(
     {
         Id = entity.Id.ToString(),
         CustomAlias = entity.Code,
-        ShortUrl = $"{_baseUrl.TrimEnd('/')}/{entity.Code}",
+        ShortUrl = $"{_baseUrl.TrimEnd('/')}/{entity.Id}",
         OriginalUrl = entity.OriginalUrl,
         CreatedAt = entity.CreatedAt,
         ExpirationDate = entity.ExpirationDate,
