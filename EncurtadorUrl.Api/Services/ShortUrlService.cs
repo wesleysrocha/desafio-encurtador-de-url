@@ -8,7 +8,7 @@ namespace UrlShortener.Api.Services;
 public sealed class ShortUrlService(
     IShortUrlRepository repo,
     IConfiguration config,
-    ILogger<ShortUrlService> logger)
+    ILogger<ShortUrlService> logger) : IShortUrlService
 {
     private readonly string _baseUrl = config["Shortener:BaseUrl"] ?? "http://localhost:8080";
 

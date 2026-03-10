@@ -7,7 +7,7 @@ namespace UrlShortener.Api.Controllers;
 
 [ApiController]
 [Route("v1/urls")]
-public sealed class UrlsController(ShortUrlService service) : ControllerBase
+public sealed class UrlsController(IShortUrlService service) : ControllerBase
 {
     [HttpPost]
     [RequireApiKey]

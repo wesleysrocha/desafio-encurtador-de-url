@@ -13,7 +13,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("Sqlite")));
 
 builder.Services.AddScoped<IShortUrlRepository, ShortUrlRepository>();
-builder.Services.AddScoped<ShortUrlService>();
+builder.Services.AddScoped<IShortUrlService, ShortUrlService>();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>

@@ -1,9 +1,11 @@
-﻿using System.Diagnostics;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
+using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using UrlShortener.Api.Services;
 
 namespace UrlShortener.Api.Middleware;
 
+[ExcludeFromCodeCoverage]
 public sealed class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<ExceptionHandlingMiddleware> logger)
 {
     public async Task InvokeAsync(HttpContext context)

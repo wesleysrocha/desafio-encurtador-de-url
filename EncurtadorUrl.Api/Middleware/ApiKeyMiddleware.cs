@@ -1,7 +1,9 @@
+using System.Diagnostics.CodeAnalysis;
 using UrlShortener.Api.Services;
 
 namespace UrlShortener.Api.Middleware;
 
+[ExcludeFromCodeCoverage]
 public sealed class ApiKeyMiddleware(RequestDelegate next, IConfiguration config)
 {
     private readonly string? _apiKey = config["Shortener:ApiKey"];
