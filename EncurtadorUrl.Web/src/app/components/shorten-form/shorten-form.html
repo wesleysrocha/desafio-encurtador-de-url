@@ -1,0 +1,74 @@
+<section class="card shorten">
+  <h2>Encurte um link</h2>
+
+  <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    <div class="field">
+      <label for="originalUrl">Cole sua URL longa</label>
+      <div class="url-row">
+        <input
+          id="originalUrl"
+          class="input"
+          [class.invalid]="showError('originalUrl')"
+          type="url"
+          formControlName="originalUrl"
+          placeholder="https://exemplo.com/minha-pagina-com-um-endereco-bem-longo"
+          autocomplete="off"
+        />
+        <button class="btn btn-primary" type="submit" [disabled]="loading()">
+          {{ loading() ? 'Encurtando...' : 'Encurtar' }}
+        </button>
+      </div>
+      @if (showError('originalUrl')) {
+        <span class="error">Informe uma URL válida começando com http:// ou https://</span>
+      }
+    </div>
+
+    <div class="options">
+      <div class="field">
+        <label for="customAlias">Alias personalizado <span class="optional">(opcional)</span></label>
+        <input
+          id="customAlias"
+          class="input"
+          [class.invalid]="showError('customAlias')"
+          type="text"
+          formControlName="customAlias"
+          placeholder="ex.: meu-link"
+          maxlength="12"
+          autocomplete="off"
+        />
+        @if (showError('customAlias')) {
+          <span class="error">De 3 a 12 caracteres: letras, números, "-" ou "_"</span>
+        } @else {
+          <span class="hint">De 3 a 12 caracteres: letras, números, "-" ou "_"</span>
+        }
+      </div>
+
+      <div class="field">
+        <label for="expiration">Expira em</label>
+        <select id="expiration" class="select" formControlName="expirationMinutes">
+          @for (opt of expirationOptions; track opt.minutes) {
+            <option [ngValue]="opt.minutes">{{ opt.label }}</option>
+          }
+        </select>
+        <span class="hint">Depois disso o link deixa de redirecionar</span>
+      </div>
+    </div>
+  </form>
+
+  @if (error()) {
+    <div class="alert alert-error">{{ error() }}</div>
+  }
+
+  @if (result(); as r) {
+    <div class="result">
+      <div class="result-info">
+        <span class="result-label">Seu link encurtado</span>
+        <a class="result-link" [href]="r.shortUrl" (click)="$event.preventDefault(); open(r)">{{ r.shortUrl }}</a>
+        <span class="result-original" [title]="r.originalUrl">{{ r.originalUrl }}</span>
+      </div>
+      <button class="btn btn-primary" type="button" (click)="copyResult()">
+        {{ copied() ? 'Copiado!' : 'Copiar' }}
+      </button>
+    </div>
+  }
+</section>

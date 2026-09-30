@@ -41,5 +41,18 @@ services:
       DB_PASSWORD: "${DB_PASSWORD:-root}"
       DB_NAME: "${DB_NAME:-url_shortener}"
 
+  urlshortener-web:
+    build:
+      context: ./EncurtadorUrl.Web
+      dockerfile: Dockerfile
+    container_name: urlshortener-web
+    restart: unless-stopped
+    depends_on:
+      - urlshortener-api
+    ports:
+      # Frontend Angular servido pelo Nginx. As chamadas /api/* são
+      # encaminhadas para o serviço urlshortener-api (veja EncurtadorUrl.Web/nginx.conf).
+      - "4200:80"
+
 volumes:
   urlshortener-mysql-data:

@@ -1,0 +1,10 @@
+# Evita enviar arquivos desnecessários (ou com caminhos do Windows) para o build da API
+**/bin/
+**/obj/
+**/node_modules/
+.vs/
+.git/
+.github/
+.env
+images/
+EncurtadorUrl.Web/

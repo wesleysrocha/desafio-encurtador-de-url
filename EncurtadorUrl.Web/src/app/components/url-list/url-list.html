@@ -1,0 +1,93 @@
+<section class="card list">
+  <header class="list-header">
+    <div>
+      <h2>Seus links</h2>
+      <p class="subtitle">
+        {{ items().length }} link(s) nesta página · {{ totalClicks() }} clique(s)
+      </p>
+    </div>
+    <button class="btn btn-outline btn-sm" type="button" (click)="load()" [disabled]="loading()">
+      {{ loading() ? 'Atualizando...' : 'Atualizar' }}
+    </button>
+  </header>
+
+  @if (error()) {
+    <div class="alert alert-error">{{ error() }}</div>
+  }
+
+  @if (!loading() && items().length === 0 && !error()) {
+    <div class="empty">
+      <strong>Nenhum link ainda.</strong>
+      <span>Encurte sua primeira URL no formulário acima.</span>
+    </div>
+  }
+
+  <ul class="items">
+    @for (item of items(); track item.id) {
+      <li class="item" [class.expired]="isExpired(item)">
+        <div class="item-main">
+          <div class="item-title">
+            <a
+              class="short"
+              [href]="item.shortUrl"
+              (click)="$event.preventDefault(); open(item)"
+              [title]="'Abrir ' + item.originalUrl"
+            >{{ item.shortUrl }}</a>
+            @if (isExpired(item)) {
+              <span class="badge badge-expired">Expirada</span>
+            } @else {
+              <span class="badge badge-active">Ativa</span>
+            }
+          </div>
+
+          <span class="original" [title]="item.originalUrl">{{ item.originalUrl }}</span>
+
+          <div class="meta">
+            <span><strong>Alias:</strong> {{ item.customAlias }}</span>
+            <span><strong>Criada:</strong> {{ item.createdAt | date: 'dd/MM/yyyy HH:mm' }}</span>
+            @if (item.expirationDate) {
+              <span><strong>Expira:</strong> {{ item.expirationDate | date: 'dd/MM/yyyy HH:mm' }}</span>
+            }
+          </div>
+        </div>
+
+        <div class="item-side">
+          <div class="clicks" title="Cliques">
+            <span class="clicks-value">{{ item.clickCount }}</span>
+            <span class="clicks-label">cliques</span>
+          </div>
+
+          <div class="actions">
+            <button class="btn btn-outline btn-sm" type="button" (click)="copy(item)">
+              {{ copiedId() === item.id ? 'Copiado!' : 'Copiar' }}
+            </button>
+            <button
+              class="btn btn-outline btn-sm"
+              type="button"
+              (click)="open(item)"
+              [disabled]="isExpired(item)"
+            >Abrir</button>
+            <button
+              class="btn btn-danger btn-sm"
+              type="button"
+              (click)="remove(item)"
+              [disabled]="deletingId() === item.id"
+            >{{ deletingId() === item.id ? 'Excluindo...' : 'Excluir' }}</button>
+          </div>
+        </div>
+      </li>
+    }
+  </ul>
+
+  @if (page() > 1 || hasNext()) {
+    <nav class="pager">
+      <button class="btn btn-outline btn-sm" type="button" (click)="previous()" [disabled]="page() === 1 || loading()">
+        ← Anterior
+      </button>
+      <span>Página {{ page() }}</span>
+      <button class="btn btn-outline btn-sm" type="button" (click)="next()" [disabled]="!hasNext() || loading()">
+        Próxima →
+      </button>
+    </nav>
+  }
+</section>
