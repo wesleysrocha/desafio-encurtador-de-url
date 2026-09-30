@@ -65,7 +65,7 @@ public class UrlsControllerTests
     {
         var svc = new Mock<IShortUrlService>();
         svc.Setup(s => s.CreateAsync(It.IsAny<CreateShortUrlRequest>(), It.IsAny<CancellationToken>()))
-           .ReturnsAsync((ShortUrlResponse?)null);
+           .ReturnsAsync((ShortUrlResponse)null!);
 
         var ctrl = CreateController(svc);
 

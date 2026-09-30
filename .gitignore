@@ -8,3 +8,8 @@ app.db
 *.log
 
 .env
+
+# Frontend (Angular)
+node_modules/
+EncurtadorUrl.Web/dist/
+EncurtadorUrl.Web/.angular/

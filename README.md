@@ -1,10 +1,10 @@
-# URL Shortener API (.NET 8 + MySQL)
+# URL Shortener (.NET 8 + MySQL + Angular)
 
-API de encurtamento de URLs, com redirecionamento para uma URL específica e busca de URLs.
+Encurtador de URLs estilo bitly: API .NET 8 com MySQL e frontend em Angular para criar, listar, abrir e excluir links curtos.
 
 ## 🚀 Início rápido
 
-> **A forma mais fácil de rodar:** só precisa do [Docker Desktop](https://www.docker.com/products/docker-desktop/). Não precisa instalar .NET nem MySQL, nem criar `.env`.
+> **A forma mais fácil de rodar:** só precisa do [Docker Desktop](https://www.docker.com/products/docker-desktop/). Não precisa instalar .NET, Node.js nem MySQL, nem criar `.env`.
 
 ```bash
 git clone https://github.com/wesleysrocha/desafio-encurtador-de-url.git
@@ -12,13 +12,19 @@ cd desafio-encurtador-de-url
 docker compose up -d --build
 ```
 
-Pronto! Abra o Swagger em **http://localhost:8080/swagger**.
+Pronto! Sobem 3 containers (MySQL, API e frontend):
+
+| O quê | Endereço |
+|---|---|
+| 🖥️ Frontend (Angular) | **http://localhost:4200** |
+| 📘 API (Swagger) | http://localhost:8080/swagger |
+| 🗄️ MySQL | `localhost:3306` |
 
 - API Key para criar URLs (`POST /v1/urls`): `X-API-Key: itau`
 - MySQL em `localhost:3306` (usuário `root`, senha `root`, banco `url_shortener`)
 - Para parar: `docker compose down` (os dados continuam salvos)
 
-Outras formas de rodar: veja [Como rodar o projeto](#como-rodar-o-projeto-passo-a-passo).
+Outras formas de rodar: veja [Como rodar o projeto](#como-rodar-o-projeto-passo-a-passo) e [Frontend (Angular)](#frontend-angular).
 
 ---
 ## 📌 Sumário
@@ -37,19 +43,25 @@ Outras formas de rodar: veja [Como rodar o projeto](#como-rodar-o-projeto-passo-
     - [Configurar o `.env` (opcional)](#configurar-o-env-opcional)
     - [Acessar o banco MySQL](#acessar-o-banco-mysql)
     - [Problemas comuns](#problemas-comuns)
-5. [Testes Unitários e Integrados](#como-rodar-os-testes)
-6. [Decisões de Arquitetura](#decisões-de-arquitetura-breve)
+5. [Frontend (Angular)](#frontend-angular)
+    - [O que instalar](#o-que-instalar)
+    - [Rodar com Docker](#rodar-o-frontend-com-docker)
+    - [Rodar com `npm start`](#rodar-o-frontend-com-npm-start)
+    - [Estrutura do frontend](#estrutura-do-frontend)
+6. [Testes Unitários e Integrados](#como-rodar-os-testes)
+7. [Decisões de Arquitetura](#decisões-de-arquitetura-breve)
     - [Estrutura do Projeto](#estrutura-simples-e-direta)
     - [Regras de Geração (ID, Alias e Expiração)](#como-o-id-é-gerado)
+    - [Redirecionamento do link curto (302)](#redirecionamento-do-link-curto-302)
     - [Persistência e Segurança](#persistência-de-dados)
-7. [Documentação da API (Endpoints)](#endpoints)
+8. [Documentação da API (Endpoints)](#endpoints)
     - [POST - Criar URL](#criar-short-url)
     - [GET - Redirecionar](#redirecionar-url-específica)
     - [GET - Detalhes](#consultar-detalhes-de-um-id-específico)
     - [GET - Listagem Paginada](#listar-todas-urls-paginádas)
     - [DELETE - Remover URL](#delete-de-uma-url-específica)
-8. [Configurações de Ambiente](#configuração)
-9. [Checklist de Requisitos e Diferenciais](#regras-propostas-e-atingidas) 
+9. [Configurações de Ambiente](#configuração)
+10. [Checklist de Requisitos e Diferenciais](#regras-propostas-e-atingidas) 
 
 # Objetivo
 Construir uma API que retorne uma URL encurtada, estilo bitly. Podemos criar uma URL através do método POST, redirecionar URL através da GET /{id}, consultar uma URL específica pela rota GET /v1/urls/{id}, consultar todas as URLs cadastradas na /v1/urls e deletar uma URL com o DELETE /v1/urls/{id}.
@@ -69,7 +81,9 @@ Construir uma API que retorne uma URL encurtada, estilo bitly. Podemos criar uma
 - **xUnit** (testes)
 - **FluentAssertions** e **Moq** (asserções e mocks nos testes)
 - **SQLite em memória** (apenas nos testes, sem arquivo em disco)
-- **Docker / Docker Compose** (MySQL 8.0 + API)
+- **Angular 20** (frontend, componentes standalone + signals)
+- **Nginx** (serve o frontend e faz proxy de `/api` para a API)
+- **Docker / Docker Compose** (MySQL 8.0 + API + frontend)
 
 ---
 
@@ -79,9 +93,11 @@ O banco de dados da aplicação é o **MySQL 8**. Há três formas de rodar o pr
 
 | # | Forma | Como o MySQL roda | Como a API roda | Precisa de | Comando principal | Quando usar |
 |---|---|---|---|---|---|---|
-| **1** ⭐ | [Docker Compose](#forma-1-docker-compose-recomendado) **(recomendado)** | Container `mysql:8.0` subido pelo compose | Container | Docker | `docker compose up -d --build` | Mais fácil: sobe banco + API com um comando |
+| **1** ⭐ | [Docker Compose](#forma-1-docker-compose-recomendado) **(recomendado)** | Container `mysql:8.0` subido pelo compose | Container | Docker | `docker compose up -d --build` | Mais fácil: sobe banco + API + frontend com um comando |
 | 2 | [API local com .NET](#forma-2-api-local-com-net-e-mysql-no-docker) | Container do compose (`docker compose up -d mysql`) ou MySQL instalado na máquina | `dotnet run` | Docker + .NET 8 | `dotnet run --project EncurtadorUrl.Api` | Desenvolver e debugar no Visual Studio / VS Code |
 | 3 | [Docker manual](#forma-3-docker-manual-sem-compose) | Container `mysql:8.0` criado com `docker run` | Container (`docker run`) | Docker | `docker build` + `docker run` | Entender/controlar cada passo sem o Compose |
+
+Na Forma 1 o frontend já sobe junto em http://localhost:4200. Nas Formas 2 e 3, veja como subir o frontend em [Frontend (Angular)](#frontend-angular).
 
 Em todas as formas o banco `url_shortener` e a tabela `short_urls` são criados automaticamente na primeira execução.
 
@@ -91,6 +107,10 @@ Em todas as formas o banco `url_shortener` e a tabela `short_urls` são criados 
   docker --version
   docker compose version
   ```
+- **Node.js 20.19+ ou 22.12+** (apenas para rodar o frontend com `npm start`)
+  ```bash
+  node -v
+  ```
 - **.NET SDK 8.x** (apenas para rodar a API localmente ou os testes)
   ```bash
   dotnet --version
@@ -98,9 +118,9 @@ Em todas as formas o banco `url_shortener` e a tabela `short_urls` são criados 
 - **MySQL 8.x**: não precisa instalar, o `docker-compose.yml` já sobe um container `mysql:8.0`.
 
 ### Forma 1: Docker Compose (recomendado)
-Sobe o MySQL e a API juntos, sem precisar de `.env` nem de .NET instalado. A API só inicia depois que o MySQL passa no healthcheck, e as tabelas são criadas automaticamente na primeira execução.
+Sobe o MySQL, a API e o frontend juntos, sem precisar de `.env`, .NET ou Node.js instalados. A API só inicia depois que o MySQL passa no healthcheck, e as tabelas são criadas automaticamente na primeira execução.
 
-1. Na raiz do repositório, suba o MySQL e a API:
+1. Na raiz do repositório, suba o MySQL, a API e o frontend:
 
    ```bash
    docker compose up -d --build
@@ -112,8 +132,9 @@ Sobe o MySQL e a API juntos, sem precisar de `.env` nem de .NET instalado. A API
    docker compose ps
    ```
 
-3. Acesse o Swagger:
-   * http://localhost:8080/swagger
+3. Acesse:
+   * Frontend: http://localhost:4200
+   * Swagger: http://localhost:8080/swagger
 
 4. Para parar (os dados continuam salvos no volume):
 
@@ -127,6 +148,8 @@ Comandos úteis:
 |---|---|
 | `docker compose logs -f urlshortener-api` | Acompanha os logs da API |
 | `docker compose logs -f mysql` | Acompanha os logs do MySQL |
+| `docker compose logs -f urlshortener-web` | Acompanha os logs do frontend (Nginx) |
+| `docker compose up -d --build urlshortener-web` | Recompila e reinicia só o frontend |
 | `docker compose up -d --build urlshortener-api` | Recompila e reinicia só a API após alterar o código |
 | `docker compose stop` | Para os containers sem removê-los |
 | `docker compose down -v` | Remove os containers **e apaga os dados** do MySQL |
@@ -215,16 +238,24 @@ Faz o mesmo que o Docker Compose, mas com comandos `docker` individuais: cria um
 7. Acesse o Swagger:
    * http://localhost:8080/swagger
 
-8. Para parar e remover tudo:
+8. (Opcional) Construa e rode o frontend na mesma rede:
 
    ```bash
-   docker stop urlshortener-api urlshortener-mysql
+   docker build -t encurtador-web ./EncurtadorUrl.Web
+   docker run --rm -d --name urlshortener-web --network urlshortener-net -p 4200:80 encurtador-web
+   ```
+   Acesse http://localhost:4200
+
+9. Para parar e remover tudo:
+
+   ```bash
+   docker stop urlshortener-web urlshortener-api urlshortener-mysql
    docker rm urlshortener-mysql
    docker network rm urlshortener-net
    ```
    Para apagar também os dados: `docker volume rm urlshortener-mysql-data`.
 
-> ⚠️ Não rode a Forma 3 ao mesmo tempo que a Forma 1: os containers usam os mesmos nomes e portas (`3306` e `8080`). Rode `docker compose down` antes.
+> ⚠️ Não rode a Forma 3 ao mesmo tempo que a Forma 1: os containers usam os mesmos nomes e portas (`3306`, `8080` e `4200`). Rode `docker compose down` antes.
 
 ### Configurar o `.env` (opcional)
 As credenciais do banco ficam no arquivo `.env` na raiz do repositório. **Ele é opcional:** sem `.env`, o Docker Compose e a API usam os mesmos valores padrão (usuário `root`, senha `root`, banco `url_shortener`), então tudo funciona sem configurar nada.
@@ -289,10 +320,140 @@ As tabelas são criadas automaticamente na primeira execução (`EnsureCreated`)
 |---|---|---|
 | `Access denied for user 'root'` | Volume do MySQL criado com outra senha, ou senha com `$` sem aspas simples no `.env` | Confira o `.env` e rode `docker compose down -v` |
 | `Unable to connect to any of the specified MySQL hosts` | MySQL ainda subindo ou `DB_HOST` errado | Aguarde o `healthy` em `docker compose ps`; use `localhost` no `dotnet run` e `urlshortener-mysql` na Forma 3 |
-| `port is already allocated` (3306 ou 8080) | Outro MySQL/serviço usando a porta | Pare o serviço local (ou a outra forma que estiver rodando) ou altere o mapeamento de portas |
+| `port is already allocated` (3306, 8080 ou 4200) | Outro MySQL/serviço usando a porta | Pare o serviço local (ou a outra forma que estiver rodando) ou altere o mapeamento de portas |
+| Link curto mostra a URL em texto em vez de abrir a página | API rodando uma versão antiga (resposta `200` em vez de `302`) | Recompile: `docker compose up -d --build urlshortener-api` (veja [Redirecionamento do link curto](#redirecionamento-do-link-curto-302)) |
+| Frontend mostra "Não foi possível conectar à API" | API parada ou fora da porta 8080 | Confira http://localhost:8080/swagger e `docker compose ps` |
+| `npm install` falha ou `ng` não é reconhecido | Node.js ausente ou muito antigo | Instale o Node.js LTS (20.19+ ou 22.12+) e rode `npm install` dentro de `EncurtadorUrl.Web` |
 
 ### Observações
 - A API Key do endpoint de criação (`POST /v1/urls`) é `itau`, configurada em `Shortener:ApiKey`.
+
+---
+
+## Frontend (Angular)
+
+Interface web no estilo bitly para encurtar links, copiar, abrir, acompanhar cliques e excluir URLs. Fica na pasta `EncurtadorUrl.Web/` e conversa com a API .NET, que grava no MySQL.
+
+### O que a tela faz
+- **Encurtar URL**: campo para a URL longa, alias personalizado (opcional, 3 a 12 caracteres) e tempo de expiração (5 min, 1 hora, 1 dia, 7 dias ou 30 dias).
+- **Resultado**: mostra o link curto com botão **Copiar**.
+- **Seus links**: lista paginada (10 por página) com status **Ativa/Expirada**, número de cliques, datas e os botões **Copiar**, **Abrir** e **Excluir**.
+- O link curto e o botão **Abrir** abrem `http://localhost:8080/{id}` em uma nova aba: a API conta o clique e redireciona (302) para a URL original. Links expirados não redirecionam (410).
+
+### Como o frontend se conecta ao backend
+O navegador sempre chama o próprio frontend em `/api/...`, e esse prefixo é encaminhado para a API. Por isso não é preciso configurar CORS.
+
+| Ambiente | Quem encaminha `/api` | Destino |
+|---|---|---|
+| `npm start` (desenvolvimento) | `EncurtadorUrl.Web/proxy.conf.json` | `http://localhost:8080` |
+| Docker | `EncurtadorUrl.Web/nginx.conf` (Nginx) | `http://urlshortener-api:8080` |
+
+```
+Navegador ──▶ Frontend :4200 ──/api──▶ API .NET :8080 ──▶ MySQL :3306
+```
+
+### O que instalar
+| Para rodar com... | Precisa de |
+|---|---|
+| Docker (recomendado) | Apenas o **Docker Desktop** |
+| `npm start` | **Node.js 20.19+ ou 22.12+** (versão LTS em [nodejs.org](https://nodejs.org/)), que já inclui o **npm**. O Angular CLI é instalado junto com as dependências do projeto, não precisa instalar globalmente. |
+
+Para conferir as versões:
+```bash
+node -v
+npm -v
+```
+
+### Rodar o frontend com Docker
+O frontend já faz parte do `docker-compose.yml` (serviço `urlshortener-web`).
+
+1. Na raiz do repositório, suba tudo (MySQL + API + frontend):
+
+   ```bash
+   docker compose up -d --build
+   ```
+
+2. Acesse o frontend:
+   * http://localhost:4200
+
+3. Após alterar o código do frontend, recompile só ele:
+
+   ```bash
+   docker compose up -d --build urlshortener-web
+   ```
+
+### Rodar o frontend com `npm start`
+Bom para desenvolver: a página recarrega sozinha a cada alteração no código.
+
+1. Suba o MySQL e a API (por exemplo, com Docker):
+
+   ```bash
+   docker compose up -d mysql urlshortener-api
+   ```
+
+   Ou rode a API com `dotnet run` (veja a [Forma 2](#forma-2-api-local-com-net-e-mysql-no-docker)). A API precisa estar em `http://localhost:8080`.
+
+2. Entre na pasta do frontend:
+
+   ```bash
+   cd EncurtadorUrl.Web
+   ```
+
+3. Instale as dependências (só na primeira vez ou quando o `package.json` mudar):
+
+   ```bash
+   npm install
+   ```
+
+4. Rode o servidor de desenvolvimento:
+
+   ```bash
+   npm start
+   ```
+
+5. Acesse o frontend:
+   * http://localhost:4200
+
+6. Para parar: `Ctrl + C` no terminal.
+
+> ⚠️ Se o container `urlshortener-web` estiver rodando, ele já ocupa a porta 4200. Pare-o antes com `docker compose stop urlshortener-web`.
+
+### Gerar o build de produção
+```bash
+cd EncurtadorUrl.Web
+npm run build
+```
+Os arquivos estáticos são gerados em `EncurtadorUrl.Web/dist/encurtador-url-web/browser/`.
+
+### Estrutura do frontend
+```
+EncurtadorUrl.Web/
+├── src/
+│   ├── index.html, main.ts, styles.css      # entrada da aplicação e estilos globais
+│   └── app/
+│       ├── app.ts / app.html / app.css      # layout (topo, hero, conteúdo)
+│       ├── app.config.ts                    # providers (HttpClient)
+│       ├── core/
+│       │   ├── api.config.ts                # prefixo /api e API Key
+│       │   ├── short-url.service.ts         # chamadas HTTP para a API
+│       │   ├── error-message.ts             # converte ProblemDetails em mensagem
+│       │   └── clipboard.ts                 # copiar para a área de transferência
+│       ├── models/short-url.ts              # tipos ShortUrl e CreateShortUrlRequest
+│       └── components/
+│           ├── shorten-form/                # formulário "Encurte um link"
+│           └── url-list/                    # lista "Seus links"
+├── proxy.conf.json                          # proxy /api -> localhost:8080 (npm start)
+├── nginx.conf                               # proxy /api -> urlshortener-api (Docker)
+├── Dockerfile                               # build Node + Nginx
+└── package.json / angular.json / tsconfig*.json
+```
+
+### Configuração do frontend
+- `src/app/core/api.config.ts`
+  - `API_BASE_URL` = `/api` (prefixo encaminhado para a API)
+  - `API_KEY` = `itau` (enviado no header `X-API-Key` do `POST /v1/urls`; deve ser igual a `Shortener:ApiKey` da API)
+
+> 🔒 A API Key fica no código que roda no navegador, então qualquer pessoa consegue vê-la. Para este desafio isso é aceitável; em produção, a criação de links deveria ser protegida por autenticação de usuário.
 
 ---
 
@@ -304,7 +465,7 @@ Na raiz do repositório:
 dotnet test
 ```
 
-Os testes **não precisam do MySQL nem do Docker**: os testes de repositório e os integrados usam SQLite em memória (`Data Source=:memory:`), recriado a cada execução, sem gerar arquivo no disco.
+Os testes cobrem a API .NET e **não precisam do MySQL nem do Docker**: os testes de repositório e os integrados usam SQLite em memória (`Data Source=:memory:`), recriado a cada execução, sem gerar arquivo no disco.
 
 ---
 
@@ -318,6 +479,7 @@ Os testes **não precisam do MySQL nem do Docker**: os testes de repositório e 
 - **Domain/**: entidade de domínio (`ShortUrl`)
 - **Data/**: `AppDbContext` (mapeamento EF Core para MySQL)
 - **Middleware/**: tratamento global de erros e API Key
+- **EncurtadorUrl.Web/**: frontend Angular (veja [Estrutura do frontend](#estrutura-do-frontend))
 
 ### Como o ID é gerado
 - O banco gera um `Id` é uma string gerada automáticamente e tem o valor mínimo de 5 caracteres seu padrão é um alfanumérico de base62.
@@ -339,6 +501,61 @@ Os testes **não precisam do MySQL nem do Docker**: os testes de repositório e 
 
 ### Como o clickCount é gerado
 - clickCount é incrementado apenas pela rota GET /{id}. A rota GET /v1/urls/{id} e GET /v1/urls não acrescenta a contegem de cliques.
+
+### Redirecionamento do link curto (302)
+O link curto (`shortUrl`, ex.: `http://localhost:8080/TZ7Su`) funciona como no bitly: ao abrir no navegador, a API conta o clique e leva direto para a página original.
+
+**Como funciona**
+
+```
+Navegador ──GET /TZ7Su──▶ API
+                          ├─ id não existe?  → 404 Not Found
+                          ├─ expirado?       → 410 Gone
+                          └─ ok: clickCount + 1
+Navegador ◀──302 Found + Location: https://site-original──┘
+Navegador ──▶ abre https://site-original
+```
+
+**Problema da versão anterior:** a rota `GET /{id}` respondia `200 OK` com a URL original como texto no corpo. O clique era contado, mas o navegador apenas exibia o texto da URL em vez de abrir a página.
+
+**Correção:** trocar `Ok(...)` por `Redirect(...)` no controller. O ASP.NET Core responde `302 Found` com o header `Location`, e o navegador segue o endereço automaticamente.
+
+```csharp
+// EncurtadorUrl.Api/Controllers/RedirectController.cs
+var originalUrl = await service.ResolveAndCountClickAsync(id, ct);
+
+// antes: return Ok(originalUrl);        -> 200 com a URL em texto
+return Redirect(originalUrl);            // 302 Found + Location
+```
+
+**Por que 302 e não 301?** O `301 Moved Permanently` fica em cache no navegador: nos acessos seguintes ele iria direto ao destino sem passar pela API, e o `clickCount` e a expiração deixariam de funcionar. O `302 Found` (temporário) garante que todo acesso passe pela API.
+
+**Arquivos alterados**
+
+| Arquivo | Alteração |
+|---|---|
+| `EncurtadorUrl.Api/Controllers/RedirectController.cs` | `Ok(originalUrl)` → `Redirect(originalUrl)` e `[ProducesResponseType]` 302/404/410 para o Swagger |
+| `EncurtadorUrl.Api.Tests/Controllers/RedirectControllerTests.cs` | O teste passou a esperar `RedirectResult` (URL correta e `Permanent = false`) em vez de `OkObjectResult` |
+| `EncurtadorUrl.Web/src/app/core/short-url.service.ts` | Removidos `resolve()` e `openInNewTab()`, que liam a URL do corpo da resposta e abriam a aba manualmente |
+| `EncurtadorUrl.Web/src/app/components/url-list/*` e `shorten-form/*` | O link e o botão **Abrir** apenas abrem o `shortUrl` em nova aba; a lista é recarregada em seguida para mostrar os cliques |
+
+**Como verificar**
+
+1. Recompile a API para aplicar a mudança (a imagem Docker antiga continua respondendo `200`):
+
+   ```bash
+   docker compose up -d --build urlshortener-api
+   ```
+
+2. Confira a resposta (no PowerShell use `curl.exe`):
+
+   ```bash
+   curl -i http://localhost:8080/<id>
+   ```
+
+   Deve retornar `HTTP/1.1 302 Found` e `Location: <url original>`.
+
+3. Abra `http://localhost:8080/<id>` no navegador: a página original deve abrir e o `clickCount` aumentar em 1.
 
 ### Persistência de dados
 - Persistência com **MySQL** usando **EF Core** (provider `Pomelo.EntityFrameworkCore.MySql`), permitindo consultar os dados diretamente via `SELECT` em qualquer cliente MySQL.
@@ -410,17 +627,25 @@ curl -i -X POST "http://localhost:8080/v1/urls" \
 
 ### Redirecionar URL específica
 - **GET** `/{id}`
-- Retorna **200** com response Body contendo a URL.
+- Retorna **302 Found** com o header `Location` apontando para a URL original e incrementa o `clickCount`.
+- É o link curto (`shortUrl`): aberto no navegador, leva direto para a página original.
+- Retorna **404** se o id não existir e **410** se a URL estiver expirada.
+
+#### Exemplo (navegador)
+Abra http://localhost:8080/L7iNE e você será levado para `https://www.google.com`.
 
 #### Exemplo (curl)
 ```bash
 curl -i "http://localhost:8080/L7iNE"
 ```
 
-#### Exemplo de resposta (200)
+#### Exemplo de resposta (302)
 ```
-https://www.google.com
+HTTP/1.1 302 Found
+Location: https://www.google.com
 ```
+
+> ℹ️ No Swagger, o "Try it out" desta rota pode mostrar `Failed to fetch`: o navegador segue o redirecionamento para outro site e bloqueia a leitura da resposta (CORS). Isso é esperado; teste abrindo o link no navegador ou com `curl -i`.
 
 ---
 
@@ -510,7 +735,8 @@ Arquivos:
   - `Shortener:BaseUrl` = `http://localhost:8080`
   - `Shortener:ApiKey` = `itau`
   - `Database:*` = valores de conexão padrão com o MySQL (usados quando não há `.env`)
-- `docker-compose.yml`: define `ASPNETCORE_ENVIRONMENT=Development`, `Shortener__BaseUrl`, `Shortener__ApiKey` e `DB_HOST=mysql` (nome do serviço na rede do compose).
+- `docker-compose.yml`: define `ASPNETCORE_ENVIRONMENT=Development`, `Shortener__BaseUrl`, `Shortener__ApiKey` e `DB_HOST=mysql` (nome do serviço na rede do compose), além do serviço `urlshortener-web` (frontend na porta 4200).
+- `EncurtadorUrl.Web/src/app/core/api.config.ts`: prefixo `/api` e API Key usados pelo frontend (veja [Configuração do frontend](#configuração-do-frontend)).
 
 ## Regras propostas e atingidas 
 - [x] Geração de IDs curto legível em URLs (ex.: base62, alfanumérico).
@@ -530,3 +756,4 @@ Arquivos:
 - [x] Adicionado dois endpoints um para Consultar todas as URLs cadastradas na /v1/urls e outro para deletar uma URL com o DELETE /v1/urls/{id}.
 - [x] foi adicionado Dockerfile e/ou docker-compose para facilitar a execução 
 - [x] teste integrado validando end to end tanto da rota que cria URL como a que consulta.
+- [x] frontend em Angular (estilo bitly) integrado à API: criar, listar, copiar, abrir (contando cliques) e excluir links.
