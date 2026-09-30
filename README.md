@@ -1,20 +1,42 @@
-# URL Shortener API (.NET 8 + SQLite)
+# URL Shortener API (.NET 8 + MySQL)
 
 API de encurtamento de URLs, com redirecionamento para uma URL específica e busca de URLs.
+
+## 🚀 Início rápido
+
+> **A forma mais fácil de rodar:** só precisa do [Docker Desktop](https://www.docker.com/products/docker-desktop/). Não precisa instalar .NET nem MySQL, nem criar `.env`.
+
+```bash
+git clone https://github.com/wesleysrocha/desafio-encurtador-de-url.git
+cd desafio-encurtador-de-url
+docker compose up -d --build
+```
+
+Pronto! Abra o Swagger em **http://localhost:8080/swagger**.
+
+- API Key para criar URLs (`POST /v1/urls`): `X-API-Key: itau`
+- MySQL em `localhost:3306` (usuário `root`, senha `root`, banco `url_shortener`)
+- Para parar: `docker compose down` (os dados continuam salvos)
+
+Outras formas de rodar: veja [Como rodar o projeto](#como-rodar-o-projeto-passo-a-passo).
 
 ---
 ## 📌 Sumário
 
+0. [🚀 Início rápido](#-início-rápido)
 1. [Objetivo](#objetivo)
 2. [Diagramas de Arquitetura](#diagrama-de-use-case)
     - [Casos de Uso](#diagrama-de-use-case)
     - [Modelagem do Banco de Dados](#modelagem-do-banco)
 3. [Stack Tecnológica](#linguagem--stack-utilizada)
-4. [Como Rodar o Projeto](#como-rodar-o-projeto-passo-a-passo)
+4. [Como Rodar o Projeto (3 formas)](#como-rodar-o-projeto-passo-a-passo)
     - [Pré-requisitos](#pré-requisitos)
-    - [Execução Local (.NET)](#executar-a-api-porta-8080)
-    - [Execução via Docker Compose](#executar-com-docker-compose)
-    - [Execução via Docker (Manual)](#executar-com-docker)
+    - [Forma 1: Docker Compose ⭐ recomendado](#forma-1-docker-compose-recomendado)
+    - [Forma 2: API local com .NET e MySQL no Docker](#forma-2-api-local-com-net-e-mysql-no-docker)
+    - [Forma 3: Docker manual (sem Compose)](#forma-3-docker-manual-sem-compose)
+    - [Configurar o `.env` (opcional)](#configurar-o-env-opcional)
+    - [Acessar o banco MySQL](#acessar-o-banco-mysql)
+    - [Problemas comuns](#problemas-comuns)
 5. [Testes Unitários e Integrados](#como-rodar-os-testes)
 6. [Decisões de Arquitetura](#decisões-de-arquitetura-breve)
     - [Estrutura do Projeto](#estrutura-simples-e-direta)
@@ -42,66 +64,235 @@ Construir uma API que retorne uma URL encurtada, estilo bitly. Podemos criar uma
 - **.NET 8** (C#)
 - **ASP.NET Core Web API (Controllers)**
 - **Swagger / OpenAPI** (Swashbuckle)
-- **EF Core + SQLite** (persistência em arquivo `app.db`)
+- **EF Core 8 + MySQL 8.0** (via Pomelo.EntityFrameworkCore.MySql)
+- **DotNetEnv** (carrega variáveis de um arquivo `.env`)
 - **xUnit** (testes)
-- **FluentAssertions** (asserções nos testes) *(se incluído no projeto de testes)*
+- **FluentAssertions** e **Moq** (asserções e mocks nos testes)
+- **SQLite em memória** (apenas nos testes, sem arquivo em disco)
+- **Docker / Docker Compose** (MySQL 8.0 + API)
 
 ---
 
 ## Como rodar o projeto (passo a passo)
 
-### Pré-requisitos
-- **.NET SDK 8.x**
-  - Verificar:
-    ```bash
-    dotnet --version
-    ```
+O banco de dados da aplicação é o **MySQL 8**. Há três formas de rodar o projeto:
 
-### Executar a API (porta 8080)
-1. Na raiz do repositório, restaure as dependências:
+| # | Forma | Como o MySQL roda | Como a API roda | Precisa de | Comando principal | Quando usar |
+|---|---|---|---|---|---|---|
+| **1** ⭐ | [Docker Compose](#forma-1-docker-compose-recomendado) **(recomendado)** | Container `mysql:8.0` subido pelo compose | Container | Docker | `docker compose up -d --build` | Mais fácil: sobe banco + API com um comando |
+| 2 | [API local com .NET](#forma-2-api-local-com-net-e-mysql-no-docker) | Container do compose (`docker compose up -d mysql`) ou MySQL instalado na máquina | `dotnet run` | Docker + .NET 8 | `dotnet run --project EncurtadorUrl.Api` | Desenvolver e debugar no Visual Studio / VS Code |
+| 3 | [Docker manual](#forma-3-docker-manual-sem-compose) | Container `mysql:8.0` criado com `docker run` | Container (`docker run`) | Docker | `docker build` + `docker run` | Entender/controlar cada passo sem o Compose |
+
+Em todas as formas o banco `url_shortener` e a tabela `short_urls` são criados automaticamente na primeira execução.
+
+### Pré-requisitos
+- **Docker Desktop** (inclui o Docker Compose v2)
+  ```bash
+  docker --version
+  docker compose version
+  ```
+- **.NET SDK 8.x** (apenas para rodar a API localmente ou os testes)
+  ```bash
+  dotnet --version
+  ```
+- **MySQL 8.x**: não precisa instalar, o `docker-compose.yml` já sobe um container `mysql:8.0`.
+
+### Forma 1: Docker Compose (recomendado)
+Sobe o MySQL e a API juntos, sem precisar de `.env` nem de .NET instalado. A API só inicia depois que o MySQL passa no healthcheck, e as tabelas são criadas automaticamente na primeira execução.
+
+1. Na raiz do repositório, suba o MySQL e a API:
+
+   ```bash
+   docker compose up -d --build
+   ```
+
+2. Verifique se os containers estão rodando (o MySQL deve aparecer como `healthy`):
+
+   ```bash
+   docker compose ps
+   ```
+
+3. Acesse o Swagger:
+   * http://localhost:8080/swagger
+
+4. Para parar (os dados continuam salvos no volume):
+
+   ```bash
+   docker compose down
+   ```
+
+Comandos úteis:
+
+| Comando | O que faz |
+|---|---|
+| `docker compose logs -f urlshortener-api` | Acompanha os logs da API |
+| `docker compose logs -f mysql` | Acompanha os logs do MySQL |
+| `docker compose up -d --build urlshortener-api` | Recompila e reinicia só a API após alterar o código |
+| `docker compose stop` | Para os containers sem removê-los |
+| `docker compose down -v` | Remove os containers **e apaga os dados** do MySQL |
+
+> ⚠️ **Trocou a senha no `.env`?** O MySQL só aplica a senha na **primeira** criação do volume. Se o volume já existir com outra senha, a API falha com `Access denied for user 'root'`. Recrie o volume (os dados serão apagados) com `docker compose down -v` e depois `docker compose up -d --build`.
+
+### Forma 2: API local com .NET e MySQL no Docker
+Roda a API com `dotnet run` (bom para debugar no Visual Studio / VS Code) e usa o MySQL em container.
+
+1. (Opcional) Crie o `.env` (veja [Configurar o `.env`](#configurar-o-env-opcional)). Sem ele, a API conecta em `localhost:3306` com `root`/`root`.
+
+2. Suba apenas o MySQL:
+
+   ```bash
+   docker compose up -d mysql
+   ```
+
+3. Aguarde o MySQL ficar `healthy`:
+
+   ```bash
+   docker compose ps
+   ```
+
+4. Na raiz do repositório, restaure as dependências:
+
    ```bash
    dotnet restore
    ```
 
-2. Rode a API:
+5. Rode a API:
+
    ```bash
    dotnet run --project EncurtadorUrl.Api --urls http://localhost:8080
    ```
 
-3. Acesse o Swagger:
-   - http://localhost:8080/swagger
+6. Acesse o Swagger:
+   * http://localhost:8080/swagger
 
+7. Para parar: `Ctrl + C` no terminal da API e, para desligar o MySQL:
 
+   ```bash
+   docker compose down
+   ```
 
-### Executar com Docker Compose
-```bash
-docker compose up --build
-```
+> 💡 Se você já tem um MySQL 8 instalado na máquina, pule os passos 2 e 3 e ajuste as credenciais no `.env`.
 
-### Executar com Docker
-1. Construa a imagem:
+### Forma 3: Docker manual (sem Compose)
+Faz o mesmo que o Docker Compose, mas com comandos `docker` individuais: cria uma rede, um volume, o container do MySQL e o container da API.
+
+1. Construa a imagem da API:
+
    ```bash
    docker build -t desafio-encurtador-de-url .
    ```
 
-2. Crie o volume para persistência de dados:
+2. Crie a rede para a API e o MySQL se comunicarem:
+
    ```bash
-   docker volume create urlshortener-data
+   docker network create urlshortener-net
    ```
 
-3. Execute o container:
+3. Crie o volume para persistência dos dados do MySQL:
+
    ```bash
-   docker run --rm -p 8080:8080 -v urlshortener-data:/app/data -e ConnectionStrings__Sqlite="Data Source=/app/data/app.db" desafio-encurtador-de-url
+   docker volume create urlshortener-mysql-data
    ```
 
-4. Acesse o Swagger:
-   - http://localhost:8080/swagger
+4. Suba o container do MySQL:
+
+   ```bash
+   docker run -d --name urlshortener-mysql --network urlshortener-net -p 3306:3306 -v urlshortener-mysql-data:/var/lib/mysql -e MYSQL_ROOT_PASSWORD=root -e MYSQL_DATABASE=url_shortener mysql:8.0
+   ```
+
+5. Aguarde o MySQL ficar pronto (repita até aparecer `mysqld is alive`):
+
+   ```bash
+   docker exec urlshortener-mysql mysqladmin ping -uroot -proot
+   ```
+
+6. Execute o container da API:
+
+   ```bash
+   docker run --rm -d --name urlshortener-api --network urlshortener-net -p 8080:8080 -e DB_HOST=urlshortener-mysql -e DB_PASSWORD=root desafio-encurtador-de-url
+   ```
+
+7. Acesse o Swagger:
+   * http://localhost:8080/swagger
+
+8. Para parar e remover tudo:
+
+   ```bash
+   docker stop urlshortener-api urlshortener-mysql
+   docker rm urlshortener-mysql
+   docker network rm urlshortener-net
+   ```
+   Para apagar também os dados: `docker volume rm urlshortener-mysql-data`.
+
+> ⚠️ Não rode a Forma 3 ao mesmo tempo que a Forma 1: os containers usam os mesmos nomes e portas (`3306` e `8080`). Rode `docker compose down` antes.
+
+### Configurar o `.env` (opcional)
+As credenciais do banco ficam no arquivo `.env` na raiz do repositório. **Ele é opcional:** sem `.env`, o Docker Compose e a API usam os mesmos valores padrão (usuário `root`, senha `root`, banco `url_shortener`), então tudo funciona sem configurar nada.
+
+Para personalizar, crie o `.env` a partir do exemplo:
+
+```bash
+# Git Bash / Linux / macOS
+cp .env.example .env
+```
+```powershell
+# PowerShell
+Copy-Item .env.example .env
+```
+
+Conteúdo esperado:
+```
+DB_HOST=localhost
+DB_PORT=3306
+DB_USER=root
+DB_PASSWORD=root
+DB_NAME=url_shortener
+```
+
+| Variável | Descrição | Padrão |
+|---|---|---|
+| `DB_HOST` | Host do MySQL (no Docker Compose é sobrescrito para `mysql`) | `localhost` |
+| `DB_PORT` | Porta do MySQL | `3306` |
+| `DB_USER` | Usuário do MySQL | `root` |
+| `DB_PASSWORD` | Senha do usuário (também vira a senha de `root` do container MySQL) | `root` |
+| `DB_NAME` | Nome do banco (criado automaticamente) | `url_shortener` |
+
+> 🔒 O `.env` está no `.gitignore` e **não deve ser commitado**. Coloque senhas reais apenas nele, nunca no `.env.example` nem no README.
+>
+> Se a senha tiver `$`, coloque o valor entre aspas simples (ex.: `DB_PASSWORD='minha$senha'`), senão o Docker Compose e o DotNetEnv tratam `$...` como variável.
+
+### Acessar o banco MySQL
+As tabelas são criadas automaticamente na primeira execução (`EnsureCreated`). A tabela principal é `short_urls`. Funciona com o MySQL de qualquer uma das 3 formas (o container se chama `urlshortener-mysql` em todas).
+
+1. Abra o cliente MySQL dentro do container:
+
+   ```bash
+   docker exec -it urlshortener-mysql mysql -uroot -p url_shortener
+   ```
+
+2. Digite a senha quando for pedida (`root` por padrão, ou a do `.env`).
+
+3. Consulte os dados:
+
+   ```sql
+   SHOW TABLES;
+   SELECT * FROM short_urls;
+   ```
+
+4. Para sair: `exit`
+
+> 💡 Também dá para usar um cliente gráfico (MySQL Workbench, DBeaver, extensão do VS Code) em `localhost:3306`, com usuário `root`, senha `root` (ou a do `.env`) e banco `url_shortener`.
+
+### Problemas comuns
+
+| Sintoma | Causa provável | Solução |
+|---|---|---|
+| `Access denied for user 'root'` | Volume do MySQL criado com outra senha, ou senha com `$` sem aspas simples no `.env` | Confira o `.env` e rode `docker compose down -v` |
+| `Unable to connect to any of the specified MySQL hosts` | MySQL ainda subindo ou `DB_HOST` errado | Aguarde o `healthy` em `docker compose ps`; use `localhost` no `dotnet run` e `urlshortener-mysql` na Forma 3 |
+| `port is already allocated` (3306 ou 8080) | Outro MySQL/serviço usando a porta | Pare o serviço local (ou a outra forma que estiver rodando) ou altere o mapeamento de portas |
 
 ### Observações
-- O banco SQLite é um arquivo chamado **`app.db`** e é criado automaticamente na primeira execução.
-- A API Key para o endpoint de criação vem de `appsettings.json`:
-  - `Shortener:ApiKey`
-      - API-KEY tem o valor de: itau
+- A API Key do endpoint de criação (`POST /v1/urls`) é `itau`, configurada em `Shortener:ApiKey`.
 
 ---
 
@@ -113,6 +304,8 @@ Na raiz do repositório:
 dotnet test
 ```
 
+Os testes **não precisam do MySQL nem do Docker**: os testes de repositório e os integrados usam SQLite em memória (`Data Source=:memory:`), recriado a cada execução, sem gerar arquivo no disco.
+
 ---
 
 ## Decisões de arquitetura (breve)
@@ -123,7 +316,7 @@ dotnet test
 - **Services/**: regras de negócio (validações, geração de código, expiração, incremento de clique)
 - **Repositories/**: acesso a dados via EF Core (queries e persistência)
 - **Domain/**: entidade de domínio (`ShortUrl`)
-- **Data/**: `AppDbContext` (mapeamento EF Core)
+- **Data/**: `AppDbContext` (mapeamento EF Core para MySQL)
 - **Middleware/**: tratamento global de erros e API Key
 
 ### Como o ID é gerado
@@ -148,7 +341,7 @@ dotnet test
 - clickCount é incrementado apenas pela rota GET /{id}. A rota GET /v1/urls/{id} e GET /v1/urls não acrescenta a contegem de cliques.
 
 ### Persistência de dados
-- Persistência com **SQLite** (arquivo `app.db`) usando **EF Core**.
+- Persistência com **MySQL** usando **EF Core** (provider `Pomelo.EntityFrameworkCore.MySql`), permitindo consultar os dados diretamente via `SELECT` em qualquer cliente MySQL.
 - A tabela principal é `short_urls` 
 - Datas: Armazenadas em formato UTC através de conversores de valor (DateTimeOffset para DateTime UTC).
 - **PK e Índice único em `ID`** garante unicidade (ID gerados).
@@ -305,11 +498,20 @@ curl -X 'DELETE' \
 
 ## Configuração
 
-- `UrlShortener.Api/appsettings.json`
+A connection string do MySQL é montada em `Program.cs` com a seguinte prioridade:
+
+1. Variáveis de ambiente `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` (vindas do `.env` ou do container)
+2. Seção `Database:*` do `appsettings.json` (`localhost`, `3306`, `root`, `root`, `url_shortener`)
+3. Valores padrão no código
+
+Arquivos:
+- `.env` (na raiz, veja `.env.example`): credenciais do MySQL. É o mesmo arquivo usado pelo `docker-compose.yml`, então editar um único lugar já vale para `dotnet run` e para `docker compose up`. Está no `.gitignore`.
+- `EncurtadorUrl.Api/appsettings.json`
   - `Shortener:BaseUrl` = `http://localhost:8080`
   - `Shortener:ApiKey` = `itau`
-  - `ConnectionStrings:Sqlite` = `Data Source=app.db`
-  
+  - `Database:*` = valores de conexão padrão com o MySQL (usados quando não há `.env`)
+- `docker-compose.yml`: define `ASPNETCORE_ENVIRONMENT=Development`, `Shortener__BaseUrl`, `Shortener__ApiKey` e `DB_HOST=mysql` (nome do serviço na rede do compose).
+
 ## Regras propostas e atingidas 
 - [x] Geração de IDs curto legível em URLs (ex.: base62, alfanumérico).
 - [x] Evitar colisões (duas URLs diferentes não podem ter o mesmo id).

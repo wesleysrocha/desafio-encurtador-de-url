@@ -1,18 +1,45 @@
 services:
+  mysql:
+    image: mysql:8.0
+    container_name: urlshortener-mysql
+    restart: unless-stopped
+    environment:
+      # MYSQL_ROOT_PASSWORD e MYSQL_DATABASE vêm do arquivo .env na raiz do
+      # projeto (o Docker Compose carrega esse .env automaticamente).
+      MYSQL_ROOT_PASSWORD: "${DB_PASSWORD:-root}"
+      MYSQL_DATABASE: "${DB_NAME:-url_shortener}"
+    ports:
+      - "3306:3306"
+    volumes:
+      - urlshortener-mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${DB_PASSWORD:-root}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
   urlshortener-api:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: urlshortener-api
+    depends_on:
+      mysql:
+        condition: service_healthy
     ports:
       - "8080:8080"
     environment:
       ASPNETCORE_ENVIRONMENT: "Development"
       Shortener__BaseUrl: "http://localhost:8080"
       Shortener__ApiKey: "itau"
-      ConnectionStrings__Sqlite: "Data Source=/app/data/app.db"
-    volumes:
-      - urlshortener-data:/app/data
+      # DB_HOST fica fixo como "mysql" (nome do serviço na rede do compose);
+      # senha e nome do banco vêm do mesmo .env usado pelo serviço mysql acima,
+      # então editar só o .env já sincroniza os dois lados.
+      DB_HOST: "mysql"
+      DB_PORT: "3306"
+      DB_USER: "root"
+      DB_PASSWORD: "${DB_PASSWORD:-root}"
+      DB_NAME: "${DB_NAME:-url_shortener}"
 
 volumes:
-  urlshortener-data:
+  urlshortener-mysql-data:

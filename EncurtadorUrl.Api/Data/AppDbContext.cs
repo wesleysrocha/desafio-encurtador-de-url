@@ -20,8 +20,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
             entity.Property(x => x.Id)
                 .HasColumnName("id")
                 .HasMaxLength(64)
-                .IsRequired()
-                .HasColumnType("string");
+                .IsRequired();
 
             entity.Property(x => x.Code)
                 .HasColumnName("code")
