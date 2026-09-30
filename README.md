@@ -52,6 +52,7 @@ Outras formas de rodar: veja [Como rodar o projeto](#como-rodar-o-projeto-passo-
 7. [Decisões de Arquitetura](#decisões-de-arquitetura-breve)
     - [Estrutura do Projeto](#estrutura-simples-e-direta)
     - [Regras de Geração (ID, Alias e Expiração)](#como-o-id-é-gerado)
+    - [Redirecionamento do link curto (302)](#redirecionamento-do-link-curto-302)
     - [Persistência e Segurança](#persistência-de-dados)
 8. [Documentação da API (Endpoints)](#endpoints)
     - [POST - Criar URL](#criar-short-url)
@@ -320,6 +321,7 @@ As tabelas são criadas automaticamente na primeira execução (`EnsureCreated`)
 | `Access denied for user 'root'` | Volume do MySQL criado com outra senha, ou senha com `$` sem aspas simples no `.env` | Confira o `.env` e rode `docker compose down -v` |
 | `Unable to connect to any of the specified MySQL hosts` | MySQL ainda subindo ou `DB_HOST` errado | Aguarde o `healthy` em `docker compose ps`; use `localhost` no `dotnet run` e `urlshortener-mysql` na Forma 3 |
 | `port is already allocated` (3306, 8080 ou 4200) | Outro MySQL/serviço usando a porta | Pare o serviço local (ou a outra forma que estiver rodando) ou altere o mapeamento de portas |
+| Link curto mostra a URL em texto em vez de abrir a página | API rodando uma versão antiga (resposta `200` em vez de `302`) | Recompile: `docker compose up -d --build urlshortener-api` (veja [Redirecionamento do link curto](#redirecionamento-do-link-curto-302)) |
 | Frontend mostra "Não foi possível conectar à API" | API parada ou fora da porta 8080 | Confira http://localhost:8080/swagger e `docker compose ps` |
 | `npm install` falha ou `ng` não é reconhecido | Node.js ausente ou muito antigo | Instale o Node.js LTS (20.19+ ou 22.12+) e rode `npm install` dentro de `EncurtadorUrl.Web` |
 
@@ -336,7 +338,7 @@ Interface web no estilo bitly para encurtar links, copiar, abrir, acompanhar cli
 - **Encurtar URL**: campo para a URL longa, alias personalizado (opcional, 3 a 12 caracteres) e tempo de expiração (5 min, 1 hora, 1 dia, 7 dias ou 30 dias).
 - **Resultado**: mostra o link curto com botão **Copiar**.
 - **Seus links**: lista paginada (10 por página) com status **Ativa/Expirada**, número de cliques, datas e os botões **Copiar**, **Abrir** e **Excluir**.
-- O botão **Abrir** chama `GET /{id}` na API (o clique é contabilizado e links expirados são bloqueados) e abre a URL original em uma nova aba.
+- O link curto e o botão **Abrir** abrem `http://localhost:8080/{id}` em uma nova aba: a API conta o clique e redireciona (302) para a URL original. Links expirados não redirecionam (410).
 
 ### Como o frontend se conecta ao backend
 O navegador sempre chama o próprio frontend em `/api/...`, e esse prefixo é encaminhado para a API. Por isso não é preciso configurar CORS.
@@ -500,6 +502,61 @@ Os testes cobrem a API .NET e **não precisam do MySQL nem do Docker**: os teste
 ### Como o clickCount é gerado
 - clickCount é incrementado apenas pela rota GET /{id}. A rota GET /v1/urls/{id} e GET /v1/urls não acrescenta a contegem de cliques.
 
+### Redirecionamento do link curto (302)
+O link curto (`shortUrl`, ex.: `http://localhost:8080/TZ7Su`) funciona como no bitly: ao abrir no navegador, a API conta o clique e leva direto para a página original.
+
+**Como funciona**
+
+```
+Navegador ──GET /TZ7Su──▶ API
+                          ├─ id não existe?  → 404 Not Found
+                          ├─ expirado?       → 410 Gone
+                          └─ ok: clickCount + 1
+Navegador ◀──302 Found + Location: https://site-original──┘
+Navegador ──▶ abre https://site-original
+```
+
+**Problema da versão anterior:** a rota `GET /{id}` respondia `200 OK` com a URL original como texto no corpo. O clique era contado, mas o navegador apenas exibia o texto da URL em vez de abrir a página.
+
+**Correção:** trocar `Ok(...)` por `Redirect(...)` no controller. O ASP.NET Core responde `302 Found` com o header `Location`, e o navegador segue o endereço automaticamente.
+
+```csharp
+// EncurtadorUrl.Api/Controllers/RedirectController.cs
+var originalUrl = await service.ResolveAndCountClickAsync(id, ct);
+
+// antes: return Ok(originalUrl);        -> 200 com a URL em texto
+return Redirect(originalUrl);            // 302 Found + Location
+```
+
+**Por que 302 e não 301?** O `301 Moved Permanently` fica em cache no navegador: nos acessos seguintes ele iria direto ao destino sem passar pela API, e o `clickCount` e a expiração deixariam de funcionar. O `302 Found` (temporário) garante que todo acesso passe pela API.
+
+**Arquivos alterados**
+
+| Arquivo | Alteração |
+|---|---|
+| `EncurtadorUrl.Api/Controllers/RedirectController.cs` | `Ok(originalUrl)` → `Redirect(originalUrl)` e `[ProducesResponseType]` 302/404/410 para o Swagger |
+| `EncurtadorUrl.Api.Tests/Controllers/RedirectControllerTests.cs` | O teste passou a esperar `RedirectResult` (URL correta e `Permanent = false`) em vez de `OkObjectResult` |
+| `EncurtadorUrl.Web/src/app/core/short-url.service.ts` | Removidos `resolve()` e `openInNewTab()`, que liam a URL do corpo da resposta e abriam a aba manualmente |
+| `EncurtadorUrl.Web/src/app/components/url-list/*` e `shorten-form/*` | O link e o botão **Abrir** apenas abrem o `shortUrl` em nova aba; a lista é recarregada em seguida para mostrar os cliques |
+
+**Como verificar**
+
+1. Recompile a API para aplicar a mudança (a imagem Docker antiga continua respondendo `200`):
+
+   ```bash
+   docker compose up -d --build urlshortener-api
+   ```
+
+2. Confira a resposta (no PowerShell use `curl.exe`):
+
+   ```bash
+   curl -i http://localhost:8080/<id>
+   ```
+
+   Deve retornar `HTTP/1.1 302 Found` e `Location: <url original>`.
+
+3. Abra `http://localhost:8080/<id>` no navegador: a página original deve abrir e o `clickCount` aumentar em 1.
+
 ### Persistência de dados
 - Persistência com **MySQL** usando **EF Core** (provider `Pomelo.EntityFrameworkCore.MySql`), permitindo consultar os dados diretamente via `SELECT` em qualquer cliente MySQL.
 - A tabela principal é `short_urls` 
@@ -570,17 +627,25 @@ curl -i -X POST "http://localhost:8080/v1/urls" \
 
 ### Redirecionar URL específica
 - **GET** `/{id}`
-- Retorna **200** com response Body contendo a URL.
+- Retorna **302 Found** com o header `Location` apontando para a URL original e incrementa o `clickCount`.
+- É o link curto (`shortUrl`): aberto no navegador, leva direto para a página original.
+- Retorna **404** se o id não existir e **410** se a URL estiver expirada.
+
+#### Exemplo (navegador)
+Abra http://localhost:8080/L7iNE e você será levado para `https://www.google.com`.
 
 #### Exemplo (curl)
 ```bash
 curl -i "http://localhost:8080/L7iNE"
 ```
 
-#### Exemplo de resposta (200)
+#### Exemplo de resposta (302)
 ```
-https://www.google.com
+HTTP/1.1 302 Found
+Location: https://www.google.com
 ```
+
+> ℹ️ No Swagger, o "Try it out" desta rota pode mostrar `Failed to fetch`: o navegador segue o redirecionamento para outro site e bloqueia a leitura da resposta (CORS). Isso é esperado; teste abrindo o link no navegador ou com `curl -i`.
 
 ---
 

@@ -17,7 +17,7 @@ public sealed class ShortUrl
         ClickCount = 0;
     }
 
-    public string Id { get; private set; }
+    public string Id { get; private set; } = default!;
 
     public string Code { get; private set; } = default!;
 

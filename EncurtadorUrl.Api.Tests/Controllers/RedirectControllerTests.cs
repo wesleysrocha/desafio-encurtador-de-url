@@ -9,8 +9,8 @@ namespace UrlShortener.Tests.Controllers;
 
 public sealed class RedirectControllerTests
 {
-    [Fact(DisplayName = "GET /ID encontra URL especifica")]
-    public async Task RedirectToOriginal_WhenSuccess_ShouldReturn200OkWithOriginalUrl()
+    [Fact(DisplayName = "GET /ID redireciona para a URL original")]
+    public async Task RedirectToOriginal_WhenSuccess_ShouldRedirectToOriginalUrl()
     {
         var service = new Mock<IShortUrlService>();
 
@@ -21,8 +21,9 @@ public sealed class RedirectControllerTests
 
         var result = await controller.RedirectToOriginal("abc12", CancellationToken.None);
 
-        var ok = result.Should().BeOfType<OkObjectResult>().Subject;
-        ok.Value.Should().Be("https://example.com");
+        var redirect = result.Should().BeOfType<RedirectResult>().Subject;
+        redirect.Url.Should().Be("https://example.com");
+        redirect.Permanent.Should().BeFalse();
     }
 
     [Theory]

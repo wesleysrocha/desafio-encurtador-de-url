@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, map, tap } from 'rxjs';
+import { Observable } from 'rxjs';
 import { API_BASE_URL, API_KEY } from './api.config';
 import { CreateShortUrlRequest, ShortUrl } from '../models/short-url';
 
@@ -20,35 +20,6 @@ export class ShortUrlService {
     return this.http.get<ShortUrl[]>(`${API_BASE_URL}/v1/urls`, {
       params: { page, pageSize },
     });
-  }
-
-  /** GET /{id} - retorna a URL original e incrementa o clickCount */
-  resolve(id: string): Observable<string> {
-    return this.http
-      .get(`${API_BASE_URL}/${encodeURIComponent(id)}`, { responseType: 'text' })
-      .pipe(map((url) => url.trim().replace(/^"|"$/g, '')));
-  }
-
-  /**
-   * Abre a URL original em uma nova aba passando pela API (GET /{id}),
-   * para que o clique seja contabilizado e URLs expiradas sejam bloqueadas.
-   * A aba é aberta antes da requisição para não ser bloqueada pelo navegador.
-   */
-  openInNewTab(id: string): Observable<string> {
-    const win = window.open('', '_blank');
-    return this.resolve(id).pipe(
-      tap({
-        next: (url) => {
-          if (win) {
-            win.opener = null;
-            win.location.href = url;
-          } else {
-            window.open(url, '_blank', 'noopener');
-          }
-        },
-        error: () => win?.close(),
-      }),
-    );
   }
 
   /** DELETE /v1/urls/{id} */

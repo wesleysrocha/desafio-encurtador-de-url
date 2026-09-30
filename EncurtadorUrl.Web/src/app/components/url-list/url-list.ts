@@ -80,15 +80,10 @@ export class UrlList implements OnInit {
     }, 2000);
   }
 
+  /** Abre o link curto (a API redireciona e conta o clique) e atualiza a lista logo depois. */
   open(item: ShortUrl): void {
-    this.error.set(null);
-    this.service.openInNewTab(item.id).subscribe({
-      next: () => this.load(),
-      error: (err) => {
-        this.error.set(errorMessage(err));
-        this.load();
-      },
-    });
+    window.open(item.shortUrl, '_blank', 'noopener');
+    setTimeout(() => this.load(), 1000);
   }
 
   remove(item: ShortUrl): void {

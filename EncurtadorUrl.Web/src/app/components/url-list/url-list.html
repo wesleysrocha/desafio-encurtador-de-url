@@ -30,6 +30,8 @@
             <a
               class="short"
               [href]="item.shortUrl"
+              target="_blank"
+              rel="noopener"
               (click)="$event.preventDefault(); open(item)"
               [title]="'Abrir ' + item.originalUrl"
             >{{ item.shortUrl }}</a>

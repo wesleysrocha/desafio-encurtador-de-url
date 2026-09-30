@@ -63,7 +63,7 @@
     <div class="result">
       <div class="result-info">
         <span class="result-label">Seu link encurtado</span>
-        <a class="result-link" [href]="r.shortUrl" (click)="$event.preventDefault(); open(r)">{{ r.shortUrl }}</a>
+        <a class="result-link" [href]="r.shortUrl" target="_blank" rel="noopener" (click)="$event.preventDefault(); open(r)">{{ r.shortUrl }}</a>
         <span class="result-original" [title]="r.originalUrl">{{ r.originalUrl }}</span>
       </div>
       <button class="btn btn-primary" type="button" (click)="copyResult()">

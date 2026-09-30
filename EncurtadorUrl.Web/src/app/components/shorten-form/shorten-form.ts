@@ -86,12 +86,10 @@ export class ShortenForm {
     setTimeout(() => this.copied.set(false), 2000);
   }
 
+  /** Abre o link curto (a API redireciona e conta o clique) e avisa a lista para atualizar. */
   open(item: ShortUrl): void {
-    this.error.set(null);
-    this.service.openInNewTab(item.id).subscribe({
-      next: () => this.changed.emit(),
-      error: (err) => this.error.set(errorMessage(err)),
-    });
+    window.open(item.shortUrl, '_blank', 'noopener');
+    setTimeout(() => this.changed.emit(), 1000);
   }
 
   showError(control: 'originalUrl' | 'customAlias'): boolean {
