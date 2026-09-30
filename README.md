@@ -333,7 +333,10 @@ As tabelas são criadas automaticamente na primeira execução (`EnsureCreated`)
 
 Interface web no estilo bitly para encurtar links, copiar, abrir, acompanhar cliques e excluir URLs. Fica na pasta `EncurtadorUrl.Web/` e conversa com a API .NET, que grava no MySQL.
 
-### O que a tela faz
+## tela inicial (frontend)
+![tela](images/tela inicial.png)
+
+O que a tela faz
 - **Encurtar URL**: campo para a URL longa, alias personalizado (opcional, 3 a 12 caracteres) e tempo de expiração (5 min, 1 hora, 1 dia, 7 dias ou 30 dias).
 - **Resultado**: mostra o link curto com botão **Copiar**.
 - **Seus links**: lista paginada (10 por página) com status **Ativa/Expirada**, número de cliques, datas e os botões **Copiar**, **Abrir** e **Excluir**.
